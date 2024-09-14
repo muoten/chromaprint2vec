@@ -209,7 +209,7 @@ def main_crawler():
     dict_artists = {}
     try:
         df_mbids = pd.read_csv(MBIDS_HISTORY_FILENAME)
-    except pandas.errors.EmptyDataError:
+    except (FileNotFoundError, pandas.errors.EmptyDataError):
         df_mbids = None
 
     for artist_id in LIST_ARTIST_ID:

@@ -1,5 +1,3 @@
-import pandas.errors
-
 from config import *
 import requests
 from selenium import webdriver
@@ -10,12 +8,11 @@ import time
 import io
 import base64
 import matplotlib.pyplot as plt
-from matplotlib import colors
 from bs4 import BeautifulSoup
 import os
-import numpy as np
-import chromaprint
+from chromaprint_utils import get_fingerprint_encoded_from_array, get_array_from_image
 import pandas as pd
+import pandas.errors
 import random
 
 random.seed(RANDOM_SEED)
@@ -115,91 +112,11 @@ def get_image_by_fingerprint_id(fingerprint_id, driver, debug=IS_DEBUG):
     return image
 
 
-
-def get_array_from_image(image, debug=IS_DEBUG):
-
-    # Convert the image to grayscale (black and white)
-    gray_image = image.convert('L')
-
-    # Convert the grayscale image to a NumPy array
-    image_array = np.array(gray_image)
-    image_array = np.fliplr(image_array)
-
-    if debug:
-        # Plot the image
-        plt.figure(figsize = (20,10))
-        plt.title('Binary representation of a Chromaprint ')
-        plt.imshow(image_array.T, aspect='auto', origin='lower')
-        
-    return image_array
-
-
-def get_fingerprint_encoded_from_array(arr):
-    fp_int = []
-    arr = arr/255
-    
-    # Step 1: Iterate over each row in the array to extract sign and binary
-    for i in range(arr.shape[0]):
-        # First bit is the sign (0 for negative, 1 for positive)
-        sign = -1 if arr[i, 0] == 0 else 1
-        
-        # Remaining 31 bits represent the unsigned integer
-        binary_str = ''.join(str(int(x)) for x in arr[i, 1:])  # Convert float to int, then to str
-        if not all(c in '01' for c in binary_str):
-            raise ValueError(f"Invalid binary string detected: {binary_str}")
-
-        # Convert the binary string to an integer
-        integer_value = int(binary_str, 2) * sign
-        
-        # Append the integer to the list
-        fp_int.append(integer_value)
-
-    # Step 2: Encode the list of integers back into a fingerprint format
-    fingerprint_encoded = chromaprint.encode_fingerprint(fp_int, algorithm=0)
-
-    return fingerprint_encoded
-
 def store_fingerprint_encoded(fingeprint_bytearray, filename):
     # Open a file in write mode ('w')
     with open(filename, "wb") as file:
         # Write the string to the file
         file.write(fingeprint_bytearray)
-
-
-def get_image_from_fingeprint_encoded(fp, offset=0):
-
-    fp_int = chromaprint.decode_fingerprint(fp)[0]
-
-    fb_bin = [list('{:032b}'.format(abs(x))) for x  in fp_int] # Int to unsigned 32-bit array
-
-    arr = np.zeros([len(fb_bin), len(fb_bin[0])])
-
-    for i in range(arr.shape[0]):
-        arr[i,0] = int(fp_int[i] <= 0) # The sign is added to the first bit
-        for j in range(1, arr.shape[1]):
-            arr[i,j] = float(fb_bin[i][j])
-
-    if offset > 0:
-        image_array = arr
-
-        # Get the last 10 rows (bottom 10 horizontal lines)
-        bottom_rows = image_array[-offset:, :]
-
-        # Shift the entire image 10 pixels up
-        shifted_img = np.roll(image_array, offset, axis=0)
-
-        # Replace the first 10 rows with the bottom 10 rows
-        shifted_img[:offset, :] = bottom_rows
-
-        # Convert the shifted array back to an image
-        arr = shifted_img
-
-    cmap = colors.ListedColormap(['yellow', 'black'])
-
-    plt.figure(figsize = (20,10))
-    plt.imshow(arr.T, aspect='auto', origin='lower', cmap=cmap)
-    plt.title('Binary representation of a Chromaprint ')
-    return arr
 
 
 def get_acoustid_track_id_by_mbid(mbid):
@@ -334,7 +251,7 @@ def main_crawler():
                 filename = f"data/{artist_id}/fingerprint_{fingerprint_id}.txt"
                 if not os.path.exists(filename):
                     image = get_image_by_fingerprint_id(fingerprint_id, driver)
-                    array = get_array_from_image(image)
+                    array = get_array_from_image(image, debug=IS_DEBUG, info=f"{artist_id}/{filename}")
                     fingerprint = get_fingerprint_encoded_from_array(array)
 
                     os.system(f"mkdir -p data/{artist_id}")

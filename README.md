@@ -6,3 +6,5 @@ The project, for the moment, contains 2 modules:
 
 [Visualize with the embedding-projector](https://muoten.github.io/embedding-projector-standalone/)
 
+[![Projector example](images/projector_example.png)](https://muoten.github.io/embedding-projector-standalone/)
+

@@ -1,0 +1,13 @@
+{
+  "embeddings": [
+    {
+      "tensorName": "Chromaprint2vec",
+      "tensorShape": [
+        122,
+        20
+      ],
+      "tensorPath": "https://raw.githubusercontent.com/muoten/chromaprint2vec/main/vectors.csv",
+      "metadataPath": "https://raw.githubusercontent.com/muoten/chromaprint2vec/main/data/metadata.csv"
+    }
+  ]
+}

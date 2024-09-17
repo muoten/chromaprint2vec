@@ -61,7 +61,7 @@ def get_release_id_by_single(release_group_id, title=None):
     release_id = release_data['releases'][0]['id']
     return release_id
 
-def get_recordings_by_release_id(release_id, max_recordings=2):
+def get_recordings_by_release_id(release_id, max_recordings=MAX_RECORDINGS_PER_RELEASE):
     # Query recordings for this release
     recording_ids = []
     release_url = f"https://musicbrainz.org/ws/2/release/{release_id}?inc=recordings&fmt=json"

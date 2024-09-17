@@ -2,6 +2,8 @@ import chromaprint
 import numpy as np
 import matplotlib.pyplot as plt
 
+from config import *
+
 
 def plot_image(array, info=None):
     plt.figure(figsize=(20, 10))
@@ -42,7 +44,7 @@ def get_array_from_fingerprint_encoded(fp, offset=0, debug=False, info=None):
         # Convert the shifted array back to an image
         arr = shifted_img
 
-    if debug:
+    if SHOW_PLOTS:
         plot_image(arr, info=info)
     return arr
 
@@ -55,7 +57,7 @@ def get_array_from_image(image, debug=False, info=None):
     image_array = np.array(gray_image)
     image_array = np.fliplr(image_array)
 
-    if debug:
+    if SHOW_PLOTS:
         # Plot the image
         plot_image(image_array, info=info)
 
@@ -83,7 +85,7 @@ def get_fingerprint_encoded_from_array(arr):
         fp_int.append(integer_value)
 
     # Step 2: Encode the list of integers back into a fingerprint format
-    fingerprint_encoded = chromaprint.encode_fingerprint(fp_int, algorithm=0)
+    fingerprint_encoded = chromaprint.encode_fingerprint(fp_int, algorithm=ALGORITHM_VERSION)
 
     return fingerprint_encoded
 

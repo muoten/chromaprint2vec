@@ -28,7 +28,10 @@ def generate_vectors_from_artist_list(list_artists):
                 min_length = len(vector_i)
 
             vectors.append(vector_i)
-    vectors = [vector_i[:min_length] for vector_i in vectors]
+    max_length = max(len(vector_i) for vector_i in vectors)  # Find the maximum length of vectors
+
+    # Repeat the content of each vector until it reaches the max_length
+    vectors = [np.tile(vector_i, int(np.ceil(max_length / len(vector_i))))[:max_length] for vector_i in vectors]
     if IS_DEBUG:
         print(vectors)
     return vectors

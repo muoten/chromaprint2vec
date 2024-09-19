@@ -65,7 +65,7 @@ def find_best_offset_fft(arr1, arr2):
     return best_offset, cross_correlation[best_offset]
 
 
-def refine_vectors_with_best_offsets(vectors, threshold=0.10):
+def refine_vectors_with_best_offsets(vectors, threshold=0.11):
     vectors_refined = []
     offsets = np.zeros(len(vectors))
     n_iterations = len(vectors) * len(vectors)
@@ -81,10 +81,10 @@ def refine_vectors_with_best_offsets(vectors, threshold=0.10):
                 execution_time = end_time - start_time  # Calculate the execution time
                 print(f"Execution time per iteration: {execution_time/1000} seconds")
 
-            if i != j:
+            if j > i:
                 # Find the best offset using FFT
                 best_offset, max_corr = find_best_offset_fft(arr_i, arr_j)
-                if best_offset > 0:
+                if best_offset != 0:
                     arr_i_offset = np.concatenate((arr_i[best_offset:], arr_i[:best_offset]))
                     best_distance = get_distance_to_ref(arr_i_offset, vector_ref=arr_j)
                     if best_distance < min_distance:
@@ -149,7 +149,8 @@ def collect_metadata():
 
 
 if __name__ == "__main__":
-    vectors_original = generate_vectors_from_artist_list(LIST_ARTIST_ID)
+    sorted_artist_list = sorted(LIST_ARTIST_ID)
+    vectors_original = generate_vectors_from_artist_list(sorted_artist_list)
     vectors_reduced = reduce_dimensions(vectors_original)
     df_vectors_reduced = pd.DataFrame(vectors_reduced)
     df_vectors_reduced.to_csv(VECTORS_FILENAME, sep='\t', header=False, index=False)

@@ -8,12 +8,13 @@ import subprocess
 import random
 from chromaprint_utils import get_array_from_fingerprint_encoded, get_fingerprint_encoded_from_filename
 from numpy.fft import fft, ifft
+import time
 random.seed(RANDOM_SEED)
 
+adhoc_mapping = {}
 
 def generate_vectors_from_artist_list(list_artists):
     vectors = []
-    min_length = TYPICAL_LENGTH_VECTORS
     for artist_id in list_artists:
         fingerprint_filenames = sorted([f for f in os.listdir(f"data/{artist_id}") if f.endswith('.txt') and f.startswith('fingerprint')])
 
@@ -26,18 +27,20 @@ def generate_vectors_from_artist_list(list_artists):
                 print(fingerprint_encoded)
                 print(array)
 
-            if len(vector_i) < min_length:
-                min_length = len(vector_i)
-
             vectors.append(vector_i)
     max_length = max(len(vector_i) for vector_i in vectors)  # Find the maximum length of vectors
 
     # Repeat the content of each vector until it reaches the max_length
     vectors = [np.tile(vector_i, int(np.ceil(max_length / len(vector_i))))[:max_length] for vector_i in vectors]
+
     if IS_DEBUG:
         print(vectors)
     if FIND_BEST_OFFSET:
-        vectors = refine_vectors_with_best_offsets(vectors)
+        # truncated vectors to accelerate refine_vectors_with_best_offsets
+        vectors_truncated = [vector[:MINIMAL_LENGTH_VECTORS] for vector in vectors]
+
+        offsets, vectors_refined = refine_vectors_with_best_offsets(vectors_truncated)
+        vectors = [np.concatenate((vector[int(offsets[i]):], vector[:int(offsets[i])])) for i, vector in enumerate(vectors)]
     return vectors
 
 
@@ -62,27 +65,45 @@ def find_best_offset_fft(arr1, arr2):
     return best_offset, cross_correlation[best_offset]
 
 
-def refine_vectors_with_best_offsets(vectors, threshold=0.1):
+def refine_vectors_with_best_offsets(vectors, threshold=0.10):
     vectors_refined = []
+    offsets = np.zeros(len(vectors))
     n_iterations = len(vectors) * len(vectors)
     count = 0
+    min_distance = 1
+    start_time = time.time()
     for i,arr_i in enumerate(vectors):
         for j,arr_j in enumerate(vectors):
             count = count+1
-            if count%1000 == 0:
-                print(f"Iteration: {count} of {n_iterations}")
+            if IS_DEBUG and count%1000 == 0:
+                print(f"Iteration: {count} of {n_iterations},  i={i}, j={j}")
+                end_time = time.time()
+                execution_time = end_time - start_time  # Calculate the execution time
+                print(f"Execution time per iteration: {execution_time/1000} seconds")
+
             if i != j:
                 # Find the best offset using FFT
-                best_offset, max_corr = find_best_offset_fft(arr_j, arr_i)
+                best_offset, max_corr = find_best_offset_fft(arr_i, arr_j)
                 if best_offset > 0:
                     arr_i_offset = np.concatenate((arr_i[best_offset:], arr_i[:best_offset]))
-                    min_distance = get_distance_to_ref(arr_i_offset, vector_ref=arr_j)
-                    if min_distance < threshold:
-                        print(f"For i={i}, j={i}, offset={best_offset}, distance={min_distance}")
+                    best_distance = get_distance_to_ref(arr_i_offset, vector_ref=arr_j)
+                    if best_distance < min_distance:
+                        min_distance = best_distance
+                    if best_distance < threshold:
+                        print(f"For i={i}, j={j}, offset={best_offset}, distance={best_distance}")
+                        adhoc_mapping[i] = j
                         vectors_refined.append(arr_i_offset)
                     else:
                         vectors_refined.append(arr_i)
-    return vectors_refined
+        if i in adhoc_mapping.keys():
+            offsets[i] = adhoc_mapping[i]
+        else:
+            offsets[i] = 0
+    end_time = time.time()
+    execution_time = end_time - start_time  # Calculate the execution time
+    print(f"Execution time: {execution_time} seconds")
+
+    return offsets, vectors_refined
 
 
 def reduce_dimensions(vectors):
@@ -105,7 +126,7 @@ def reformat_metadata(df):
     df = df[['title', 'artist', 'length']]
     df['index'] = df.index
     df['__next__'] = df.index
-    adhoc_mapping = {1: 11, 46: 76, 36: 105, 42: 43}
+    #adhoc_mapping = {11: 1, 46: 76, 36: 105, 42: 43}
     df['__next__'] = df['__next__'].apply(lambda x: adhoc_mapping[x] if x in adhoc_mapping.keys() else '')
     return df
 

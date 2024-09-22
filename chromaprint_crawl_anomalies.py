@@ -3,14 +3,16 @@ import requests
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
-from chromaprint_utils import get_array_from_image
+from chromaprint_utils import get_array_from_image, get_distance_to_ref, refine_vectors_with_best_offsets
 from chromaprint_crawler import get_image_by_fingerprint_id, get_fingerprint_and_metadata_by_track_id
 import random
 import numpy as np
 
 random.seed(RANDOM_SEED)
 
-LIST_OF_RECORDINGS_TO_REVIEW = ['f28d7df9-56bb-4045-9c8c-f341dba9dca3']
+#LIST_OF_RECORDINGS_TO_REVIEW = ['ca761827-c9d4-4a44-9dea-0eec9df14ed4']
+#LIST_OF_RECORDINGS_TO_REVIEW = ['f28d7df9-56bb-4045-9c8c-f341dba9dca3']
+LIST_OF_RECORDINGS_TO_REVIEW = ['51884593-f3e3-4b72-bfbe-a201953fefa0']
 
 
 def get_acoustid_track_id_list_by_mbid(mbid):
@@ -26,22 +28,6 @@ def get_acoustid_track_id_list_by_mbid(mbid):
         track_id = track['id']
         track_id_list.append(track_id)
     return track_id_list
-
-
-def get_distance_to_ref(vector_i, vector_ref=None):
-    cosine_distance=None
-    if vector_ref is not None:
-        # Normalize vectors
-        vector_i = vector_i / np.linalg.norm(vector_i)
-        vector_ref = vector_ref / np.linalg.norm(vector_ref)
-
-        # Compute cosine similarity
-        cosine_similarity = np.dot(vector_ref, vector_i)
-
-        # Compute cosine distance
-        cosine_distance = 1 - cosine_similarity
-
-    return cosine_distance
 
 
 def generate_distance_matrix(array_all_fingerprints):
@@ -102,6 +88,11 @@ def main_crawler():
             image = get_image_by_fingerprint_id(fingerprint_id, driver)
             array = get_array_from_image(image, debug=False)
             array_all_fingerprints.append(array.reshape(-1))
+        if FIND_BEST_OFFSET:
+            # truncated vectors to accelerate refine_vectors_with_best_offsets
+            vectors_truncated = [vector[:MINIMAL_LENGTH_VECTORS] for vector in array_all_fingerprints]
+            offsets, vectors_refined, adhoc_mapping = refine_vectors_with_best_offsets(vectors_truncated)
+            array_all_fingerprints = vectors_refined
         anomalies_method1 = get_anomalies_by_distance_to_centroid(array_all_fingerprints, fingerprint_id_list)
         anomalies_method2 = get_anomalies_by_average_distance_to_others(array_all_fingerprints, fingerprint_id_list)
 

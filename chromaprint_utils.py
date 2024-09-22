@@ -1,6 +1,8 @@
 import chromaprint
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy.fft import fft, ifft
+import time
 
 from config import *
 
@@ -95,3 +97,84 @@ def get_fingerprint_encoded_from_filename(filename):
         # Read the content of the file
         binary_content = binary_file.read()
     return binary_content
+
+
+def get_distance_to_ref(vector_i, vector_ref=None):
+    cosine_distance=None
+    if vector_ref is not None:
+        # Normalize vectors
+        vector_i = vector_i / np.linalg.norm(vector_i)
+        vector_ref = vector_ref / np.linalg.norm(vector_ref)
+
+        # Compute cosine similarity
+        cosine_similarity = np.dot(vector_ref, vector_i)
+
+        # Compute cosine distance
+        cosine_distance = 1 - cosine_similarity
+
+    return cosine_distance
+
+
+# Function to compute the best offset using FFT-based cross-correlation
+def find_best_offset_fft(arr1, arr2):
+    # Step 1: Compute the FFT of both arrays
+    f_arr1 = fft(arr1)
+    f_arr2 = fft(arr2)
+
+    # Step 2: Compute the cross-correlation using inverse FFT of the product of one FFT
+    # and the complex conjugate of the other FFT
+    cross_correlation = ifft(f_arr1 * np.conj(f_arr2)).real
+
+    # Step 3: Find the index of the maximum value in the cross-correlation
+    best_offset = np.argmax(cross_correlation)
+
+    # Step 4: Handle the wrap-around offset (negative shifts)
+    if best_offset > len(arr1) // 2:
+        best_offset -= len(arr1)
+
+    # Return the best offset and the maximum correlation value
+    return best_offset, cross_correlation[best_offset]
+
+
+def refine_vectors_with_best_offsets(vectors, threshold=0.11):
+    adhoc_mapping = {}
+    vectors_refined = []
+    offsets = np.zeros(len(vectors))
+    n_iterations = len(vectors) * len(vectors)
+    count = 0
+
+    start_time = time.time()
+    for i,arr_i in enumerate(vectors):
+        arr_i_offset = arr_i
+        min_distance_for_arr_i = 1
+        for j,arr_j in enumerate(vectors):
+            count = count+1
+            if IS_DEBUG and count%1000 == 0:
+                print(f"Iteration: {count} of {n_iterations},  i={i}, j={j}")
+                end_time = time.time()
+                execution_time = end_time - start_time  # Calculate the execution time
+                print(f"Execution time per iteration: {execution_time/1000} seconds")
+
+            if j > i:
+                # Find the best offset using FFT
+                best_offset, max_corr = find_best_offset_fft(arr_i, arr_j)
+                if best_offset != 0:
+                    arr_i_offset = np.concatenate((arr_i[best_offset:], arr_i[:best_offset]))
+                    best_distance = get_distance_to_ref(arr_i_offset, vector_ref=arr_j)
+                    if (best_distance < threshold) & (best_distance < min_distance_for_arr_i):
+                        min_distance_for_arr_i = best_distance
+                        print(f"For i={i}, j={j}, offset={best_offset}, distance={min_distance_for_arr_i}")
+                        adhoc_mapping[i] = j
+                    else:
+                        arr_i_offset = arr_i
+
+        vectors_refined.append(arr_i_offset)
+        if i in adhoc_mapping.keys():
+            offsets[i] = adhoc_mapping[i]
+        else:
+            offsets[i] = 0
+    end_time = time.time()
+    execution_time = end_time - start_time  # Calculate the execution time
+    print(f"Execution time: {execution_time} seconds")
+
+    return offsets, vectors_refined, adhoc_mapping

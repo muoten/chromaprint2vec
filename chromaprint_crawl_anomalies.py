@@ -3,7 +3,8 @@ import requests
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
-from chromaprint_utils import get_array_from_image, get_distance_to_ref, refine_vectors_with_best_offsets
+from chromaprint_utils import get_array_from_image, get_distance_to_ref, refine_vectors_with_best_offsets, \
+    generate_distance_matrix
 from chromaprint_crawler import get_image_by_fingerprint_id, get_fingerprint_and_metadata_by_track_id
 import random
 import numpy as np
@@ -16,6 +17,8 @@ random.seed(RANDOM_SEED)
 LIST_OF_RECORDINGS_TO_REVIEW = ['b301b40b-534c-4ce3-8f0f-81d674ba5444']
 LIST_OF_RECORDINGS_TO_REVIEW = ['ca761827-c9d4-4a44-9dea-0eec9df14ed4']
 LIST_OF_RECORDINGS_TO_REVIEW = ['980a426e-623e-4ea5-98c7-008d037a0508'] # No surprises, Radiohead
+LIST_OF_RECORDINGS_TO_REVIEW = ['9e2ad5bc-c6f9-40d2-a36f-3122ee2072a3'] # Karma Police, Radiohead
+LIST_OF_RECORDINGS_TO_REVIEW = ['f3bea96c-5ebf-4d37-990d-14f1bc281459'] # Nude, Radiohead
 
 
 def get_acoustid_track_id_list_by_mbid(mbid):
@@ -31,24 +34,6 @@ def get_acoustid_track_id_list_by_mbid(mbid):
         track_id = track['id']
         track_id_list.append(track_id)
     return track_id_list
-
-
-def generate_distance_matrix(array_all_fingerprints):
-    num_vectors = len(array_all_fingerprints)
-
-    # Initialize a distance matrix
-    distance_matrix = np.zeros((num_vectors, num_vectors))
-
-    for i in range(num_vectors):
-        for j in range(i, num_vectors):  # Start from i to avoid redundant calculations
-            if i == j:
-                distance_matrix[i, j] = 0  # Distance to itself is zero
-            else:
-                distance = get_distance_to_ref(array_all_fingerprints[i], array_all_fingerprints[j])
-                distance = round(distance, 2)
-                distance_matrix[i,j] = distance
-                distance_matrix[j,i] = distance
-    return distance_matrix
 
 
 def get_anomalies_by_distance_to_centroid(array_all_fingerprints, fingerprint_list_id, threshold=0.2):
@@ -101,6 +86,8 @@ def main_crawler():
             vectors_truncated = [vector[:MINIMAL_LENGTH_VECTORS] for vector in array_all_fingerprints]
             offsets, vectors_refined, adhoc_mapping = refine_vectors_with_best_offsets(vectors_truncated)
             array_all_fingerprints = vectors_refined
+        list_distances = [get_distance_to_ref(array_all_fingerprints[i], vector_ref=array_all_fingerprints[value]) for i,value in adhoc_mapping.items()]
+
         anomalies_method1 = get_anomalies_by_distance_to_centroid(array_all_fingerprints, fingerprint_id_list)
         anomalies_method2 = get_anomalies_by_average_distance_to_others(array_all_fingerprints, fingerprint_id_list)
 

@@ -135,6 +135,23 @@ def find_best_offset_fft(arr1, arr2):
     # Return the best offset and the maximum correlation value
     return best_offset, cross_correlation[best_offset]
 
+def generate_distance_matrix(array_all_fingerprints):
+    num_vectors = len(array_all_fingerprints)
+
+    # Initialize a distance matrix
+    distance_matrix = np.zeros((num_vectors, num_vectors))
+
+    for i in range(num_vectors):
+        for j in range(i, num_vectors):  # Start from i to avoid redundant calculations
+            if i == j:
+                distance_matrix[i, j] = 0  # Distance to itself is zero
+            else:
+                distance = get_distance_to_ref(array_all_fingerprints[i], array_all_fingerprints[j])
+                distance = round(distance, 2)
+                distance_matrix[i,j] = distance
+                distance_matrix[j,i] = distance
+    return distance_matrix
+
 
 def refine_vectors_with_best_offsets(vectors, threshold=0.2):
     adhoc_mapping = {}
@@ -147,6 +164,7 @@ def refine_vectors_with_best_offsets(vectors, threshold=0.2):
     for i,arr_i in enumerate(vectors):
         arr_i_offset = arr_i
         min_distance_for_arr_i = 1
+        best_offset_for_arr_i = 0
         for j,arr_j in enumerate(vectors):
             count = count+1
             if IS_DEBUG and count%1000 == 0:
@@ -158,19 +176,18 @@ def refine_vectors_with_best_offsets(vectors, threshold=0.2):
             if j > i:
                 # Find the best offset using FFT
                 best_offset, max_corr = find_best_offset_fft(arr_i, arr_j)
-                if best_offset != 0:
+                if best_offset != 0 and j not in adhoc_mapping.values():
                     arr_i_offset = np.concatenate((arr_i[best_offset:], arr_i[:best_offset]))
                     best_distance = get_distance_to_ref(arr_i_offset, vector_ref=arr_j)
                     if (best_distance < threshold) & (best_distance < min_distance_for_arr_i):
                         min_distance_for_arr_i = best_distance
+                        best_offset_for_arr_i = best_offset
                         print(f"For i={i}, j={j}, offset={best_offset}, distance={min_distance_for_arr_i}")
                         adhoc_mapping[i] = j
-                    else:
-                        arr_i_offset = arr_i
 
         vectors_refined.append(arr_i_offset)
         if i in adhoc_mapping.keys():
-            offsets[i] = adhoc_mapping[i]
+            offsets[i] = best_offset_for_arr_i
         else:
             offsets[i] = 0
     end_time = time.time()

@@ -136,7 +136,7 @@ def find_best_offset_fft(arr1, arr2):
     return best_offset, cross_correlation[best_offset]
 
 
-def refine_vectors_with_best_offsets(vectors, threshold=0.11):
+def refine_vectors_with_best_offsets(vectors, threshold=0.2):
     adhoc_mapping = {}
     vectors_refined = []
     offsets = np.zeros(len(vectors))

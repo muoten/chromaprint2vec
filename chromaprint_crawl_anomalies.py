@@ -12,7 +12,10 @@ random.seed(RANDOM_SEED)
 
 #LIST_OF_RECORDINGS_TO_REVIEW = ['ca761827-c9d4-4a44-9dea-0eec9df14ed4']
 #LIST_OF_RECORDINGS_TO_REVIEW = ['f28d7df9-56bb-4045-9c8c-f341dba9dca3']
-LIST_OF_RECORDINGS_TO_REVIEW = ['51884593-f3e3-4b72-bfbe-a201953fefa0']
+#LIST_OF_RECORDINGS_TO_REVIEW = ['51884593-f3e3-4b72-bfbe-a201953fefa0']
+LIST_OF_RECORDINGS_TO_REVIEW = ['b301b40b-534c-4ce3-8f0f-81d674ba5444']
+LIST_OF_RECORDINGS_TO_REVIEW = ['ca761827-c9d4-4a44-9dea-0eec9df14ed4']
+LIST_OF_RECORDINGS_TO_REVIEW = ['980a426e-623e-4ea5-98c7-008d037a0508'] # No surprises, Radiohead
 
 
 def get_acoustid_track_id_list_by_mbid(mbid):
@@ -83,11 +86,16 @@ def main_crawler():
             print(f"acoustid track_id: {track_id}")
             fingerprint_id, metadata = get_fingerprint_and_metadata_by_track_id(track_id)
             print(f"fingerprint_id: {fingerprint_id}")
-            fingerprint_id_list.append(fingerprint_id)
+
+            # let's skip all arrays with length < MINIMAL_LENGTH_VECTORS
+
 
             image = get_image_by_fingerprint_id(fingerprint_id, driver)
             array = get_array_from_image(image, debug=False)
-            array_all_fingerprints.append(array.reshape(-1))
+            if len(array.reshape(-1)) > MINIMAL_LENGTH_VECTORS:
+                fingerprint_id_list.append(fingerprint_id)
+                array_all_fingerprints.append(array.reshape(-1))
+
         if FIND_BEST_OFFSET:
             # truncated vectors to accelerate refine_vectors_with_best_offsets
             vectors_truncated = [vector[:MINIMAL_LENGTH_VECTORS] for vector in array_all_fingerprints]

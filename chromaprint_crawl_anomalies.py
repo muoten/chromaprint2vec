@@ -19,6 +19,7 @@ LIST_OF_RECORDINGS_TO_REVIEW = ['ca761827-c9d4-4a44-9dea-0eec9df14ed4']
 LIST_OF_RECORDINGS_TO_REVIEW = ['980a426e-623e-4ea5-98c7-008d037a0508'] # No surprises, Radiohead
 LIST_OF_RECORDINGS_TO_REVIEW = ['9e2ad5bc-c6f9-40d2-a36f-3122ee2072a3'] # Karma Police, Radiohead
 LIST_OF_RECORDINGS_TO_REVIEW = ['f3bea96c-5ebf-4d37-990d-14f1bc281459'] # Nude, Radiohead
+LIST_OF_RECORDINGS_TO_REVIEW = ['585f476f-634e-4da7-ac60-1d40ffda3520'] # La Bamba, José Feliciano
 
 
 def get_acoustid_track_id_list_by_mbid(mbid):
@@ -46,7 +47,7 @@ def get_anomalies_by_distance_to_centroid(array_all_fingerprints, fingerprint_li
     return anomalies
 
 
-def get_anomalies_by_average_distance_to_others(array_all_fingerprints, fingerprint_list_id, threshold=0.3):
+def get_anomalies_by_average_distance_to_others(array_all_fingerprints, fingerprint_list_id, threshold=0.2):
     distance_matrix = generate_distance_matrix(array_all_fingerprints)
     print(distance_matrix)
     mean_distance_matrix = np.mean(distance_matrix, axis=0)

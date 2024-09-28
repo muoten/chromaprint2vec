@@ -162,7 +162,7 @@ def refine_vectors_with_best_offsets(vectors, threshold=0.2):
 
     start_time = time.time()
     for i,arr_i in enumerate(vectors):
-        arr_i_offset = arr_i
+        arr_i_best_offset = arr_i
         min_distance_for_arr_i = 1
         best_offset_for_arr_i = 0
         for j,arr_j in enumerate(vectors):
@@ -184,8 +184,9 @@ def refine_vectors_with_best_offsets(vectors, threshold=0.2):
                         best_offset_for_arr_i = best_offset
                         print(f"For i={i}, j={j}, offset={best_offset}, distance={min_distance_for_arr_i}")
                         adhoc_mapping[i] = j
+                        arr_i_best_offset = arr_i_offset
 
-        vectors_refined.append(arr_i_offset)
+        vectors_refined.append(arr_i_best_offset)
         if i in adhoc_mapping.keys():
             offsets[i] = best_offset_for_arr_i
         else:

@@ -26,14 +26,24 @@ def int_to_binary_chroma_vector(fingerprint_value):
 
 def get_chromagram_from_chromaprint(fingerprint):
     chromaprint_fingerprint, version = chromaprint.decode_fingerprint(fingerprint, base64=True)
-    return chromaprint_fingerprint
+    # Convert the Chromaprint fingerprint into a coarse chromagram (12 chroma bins per time window)
+    chromagram = [int_to_binary_chroma_vector(fp_value) for fp_value in chromaprint_fingerprint]
+    return chromagram
+
+
+def value_to_binary_array(value, length):
+    # Convert to binary and remove the '0b' prefix
+    binary_str = format(value, 'b').zfill(length)
+    # Convert binary string to an array of integers
+    return np.array([int(bit) for bit in binary_str])
 
 
 def get_array_from_chromagram(chromagram_int):
-
     # Convert integers to binary (32-bit) representation (no sign handling, just treat as unsigned)
-    fb_bin = [list('{:032b}'.format(x)) for x in chromagram_int]  # 32-bit binary for unsigned integers
-
+    fb_bin = [
+        np.concatenate([value_to_binary_array(val, 2) for val in sublist]).tolist() for sublist in
+        chromagram_int
+    ]
     # Initialize the array
     arr = np.zeros([len(fb_bin), len(fb_bin[0])])
 
@@ -45,10 +55,7 @@ def get_array_from_chromagram(chromagram_int):
     return arr
 
 
-def plot_chromagram(chromaprint_fingerprint):
-    # Convert the Chromaprint fingerprint into a coarse chromagram (12 chroma bins per time window)
-    chromagram = [int_to_binary_chroma_vector(fp_value) for fp_value in chromaprint_fingerprint]
-
+def plot_chromagram(chromagram):
     # Convert the list of chroma vectors into a NumPy array for easier manipulation and visualization
     chromagram = np.array(chromagram).T  # Transpose to match time vs chroma
 
@@ -69,4 +76,5 @@ if __name__ == "__main__":
     chromagram = get_chromagram_from_chromaprint(my_fingerprint2)
     plot_chromagram(chromagram)
     new_vector = get_array_from_chromagram(chromagram)
-    print(new_vector)
+    assert(np.array_equal(vector, vector))
+    assert(~np.array_equal(vector, new_vector))

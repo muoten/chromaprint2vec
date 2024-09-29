@@ -12,15 +12,18 @@ from chromaprint_utils import get_array_from_fingerprint_encoded, get_fingerprin
 random.seed(RANDOM_SEED)
 
 
-def generate_vectors_from_artist_list(list_artists):
+def generate_vectors_from_artist_list(list_artists, use_chromagrams=USE_CHROMAGRAMS):
     vectors = []
     for artist_id in list_artists:
         fingerprint_filenames = sorted([f for f in os.listdir(f"data/{artist_id}") if f.endswith('.txt') and f.startswith('fingerprint')])
 
         for filename in fingerprint_filenames:
             fingerprint_encoded = get_fingerprint_encoded_from_filename(f"data/{artist_id}/{filename}")
-
-            array = get_array_from_fingerprint_encoded(fingerprint_encoded, debug=IS_DEBUG, info=f"{artist_id}/{filename}")
+            if use_chromagrams:
+                chromagram = get_chromagram_from_chromaprint(fingerprint_encoded)
+                array = get_array_from_chromagram(chromagram)
+            else:
+                array = get_array_from_fingerprint_encoded(fingerprint_encoded, debug=IS_DEBUG, info=f"{artist_id}/{filename}")
             vector_i = array.reshape(-1)
             if IS_DEBUG:
                 print(fingerprint_encoded)
@@ -90,14 +93,8 @@ def collect_metadata():
 if __name__ == "__main__":
     sorted_artist_list = sorted(LIST_ARTIST_ID)
     vectors_original, adhoc_mapping = generate_vectors_from_artist_list(sorted_artist_list)
-    vectors_chromagram = []
-    for i, vector in enumerate(vectors_original):
-        array = vector.reshape(-1,32)
-        my_fingerprint = get_fingerprint_encoded_from_array(array)
-        chromagram = get_chromagram_from_chromaprint(my_fingerprint)
-        array_chromagram = get_array_from_chromagram(chromagram)
-        vectors_chromagram.append(array_chromagram.reshape(-1))
-    vectors_reduced = reduce_dimensions(vectors_chromagram)
+
+    vectors_reduced = reduce_dimensions(vectors_original)
     df_vectors_reduced = pd.DataFrame(vectors_reduced)
     df_vectors_reduced.to_csv(VECTORS_FILENAME, sep='\t', header=False, index=False)
     df_metadata = collect_metadata()

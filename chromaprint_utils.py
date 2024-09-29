@@ -19,17 +19,18 @@ def plot_image(array, info=None):
 
 
 def get_array_from_fingerprint_encoded(fp, offset=0, debug=False, info=None):
-
     fp_int = chromaprint.decode_fingerprint(fp)[0]
 
-    fb_bin = [list('{:032b}'.format(abs(x))) for x  in fp_int] # Int to unsigned 32-bit array
+    # Convert integers to binary (32-bit) representation (no sign handling, just treat as unsigned)
+    fb_bin = [list('{:032b}'.format(x)) for x in fp_int]  # 32-bit binary for unsigned integers
 
+    # Initialize the array
     arr = np.zeros([len(fb_bin), len(fb_bin[0])])
 
+    # Fill the array with the binary digits (no sign handling)
     for i in range(arr.shape[0]):
-        arr[i,0] = int(fp_int[i] > 0) # The sign is added to the first bit
-        for j in range(1, arr.shape[1]):
-            arr[i,j] = float(fb_bin[i][j])
+        for j in range(arr.shape[1]):
+            arr[i, j] = float(fb_bin[i][j])
 
     if offset > 0:
         image_array = arr
@@ -63,32 +64,28 @@ def get_array_from_image(image, debug=False, info=None):
         # Plot the image
         plot_image(image_array, info=info)
 
-    return image_array
+    return image_array/255
 
 
 def get_fingerprint_encoded_from_array(arr):
     fp_int = []
-    arr = arr / 255
 
-    # Step 1: Iterate over each row in the array to extract sign and binary
+    # Iterate over each row in the array to extract the binary representation
     for i in range(arr.shape[0]):
-        # First bit is the sign (0 for negative, 1 for positive)
-        sign = -1 if arr[i, 0] == 0 else 1
+        # Convert the row back to a binary string (no sign, treat as unsigned)
+        binary_str = ''.join(str(int(x)) for x in arr[i, :])  # Convert float to int, then to string
 
-        # Remaining 31 bits represent the unsigned integer
-        binary_str = ''.join(str(int(x)) for x in arr[i, 1:])  # Convert float to int, then to str
         if not all(c in '01' for c in binary_str):
             raise ValueError(f"Invalid binary string detected: {binary_str}")
 
-        # Convert the binary string to an integer
-        integer_value = int(binary_str, 2) * sign
+        # Convert the binary string to an unsigned integer
+        integer_value = int(binary_str, 2)
 
-        # Append the integer to the list
+        # Append the unsigned integer to the list
         fp_int.append(integer_value)
 
-    # Step 2: Encode the list of integers back into a fingerprint format
+    # Encode the list of unsigned integers back into a fingerprint format
     fingerprint_encoded = chromaprint.encode_fingerprint(fp_int, algorithm=ALGORITHM_VERSION)
-
     return fingerprint_encoded
 
 
@@ -96,6 +93,9 @@ def get_fingerprint_encoded_from_filename(filename):
     with open(filename, 'rb') as binary_file:
         # Read the content of the file
         binary_content = binary_file.read()
+     # Check if the content ends with a newline (b'\n') and remove it
+    if binary_content.endswith(b'\n'):
+        binary_content = binary_content[:-1]  # Remove the last byte (newline)
     return binary_content
 
 
@@ -200,3 +200,10 @@ def refine_vectors_with_best_offsets(vectors, threshold=0.3):
     print(f"Execution time: {execution_time} seconds")
 
     return offsets, vectors_refined, adhoc_mapping
+
+
+if __name__ == "__main__":
+    my_fingerprint1 = get_fingerprint_encoded_from_filename('data/fingerprint_chromatic.txt')
+    vector = get_array_from_fingerprint_encoded(my_fingerprint1)
+    my_fingerprint2 = get_fingerprint_encoded_from_array(vector)
+    assert(my_fingerprint1==my_fingerprint2)

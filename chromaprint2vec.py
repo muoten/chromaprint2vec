@@ -1,3 +1,4 @@
+from chromagram_utils import get_chromagram_from_chromaprint, get_array_from_chromagram
 from config import *
 import numpy as np
 import os
@@ -6,7 +7,7 @@ from sklearn.decomposition import PCA
 import subprocess
 import random
 from chromaprint_utils import get_array_from_fingerprint_encoded, get_fingerprint_encoded_from_filename, \
-    refine_vectors_with_best_offsets
+    refine_vectors_with_best_offsets, get_fingerprint_encoded_from_array
 
 random.seed(RANDOM_SEED)
 
@@ -89,7 +90,14 @@ def collect_metadata():
 if __name__ == "__main__":
     sorted_artist_list = sorted(LIST_ARTIST_ID)
     vectors_original, adhoc_mapping = generate_vectors_from_artist_list(sorted_artist_list)
-    vectors_reduced = reduce_dimensions(vectors_original)
+    vectors_chromagram = []
+    for i, vector in enumerate(vectors_original):
+        array = vector.reshape(-1,32)
+        my_fingerprint = get_fingerprint_encoded_from_array(array)
+        chromagram = get_chromagram_from_chromaprint(my_fingerprint)
+        array_chromagram = get_array_from_chromagram(chromagram)
+        vectors_chromagram.append(array_chromagram.reshape(-1))
+    vectors_reduced = reduce_dimensions(vectors_chromagram)
     df_vectors_reduced = pd.DataFrame(vectors_reduced)
     df_vectors_reduced.to_csv(VECTORS_FILENAME, sep='\t', header=False, index=False)
     df_metadata = collect_metadata()

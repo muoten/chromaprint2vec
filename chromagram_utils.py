@@ -29,6 +29,22 @@ def get_chromagram_from_chromaprint(fingerprint):
     return chromaprint_fingerprint
 
 
+def get_array_from_chromagram(chromagram_int):
+
+    # Convert integers to binary (32-bit) representation (no sign handling, just treat as unsigned)
+    fb_bin = [list('{:032b}'.format(x)) for x in chromagram_int]  # 32-bit binary for unsigned integers
+
+    # Initialize the array
+    arr = np.zeros([len(fb_bin), len(fb_bin[0])])
+
+    # Fill the array with the binary digits (no sign handling)
+    for i in range(arr.shape[0]):
+        for j in range(arr.shape[1]):
+            arr[i, j] = float(fb_bin[i][j])
+
+    return arr
+
+
 def plot_chromagram(chromaprint_fingerprint):
     # Convert the Chromaprint fingerprint into a coarse chromagram (12 chroma bins per time window)
     chromagram = [int_to_binary_chroma_vector(fp_value) for fp_value in chromaprint_fingerprint]
@@ -52,3 +68,5 @@ if __name__ == "__main__":
     my_fingerprint2 = get_fingerprint_encoded_from_array(vector)
     chromagram = get_chromagram_from_chromaprint(my_fingerprint2)
     plot_chromagram(chromagram)
+    new_vector = get_array_from_chromagram(chromagram)
+    print(new_vector)

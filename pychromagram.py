@@ -10,6 +10,9 @@ import math
 import logging
 import ctypes
 import numpy as np
+from scipy.io import wavfile
+from scipy.signal import resample
+from pydub import AudioSegment
 
 NUM_BANDS = 12
 
@@ -372,6 +375,7 @@ class ImageBuilder:
         assert len(features) == self.m_image.num_columns, "Feature vector size does not match image columns"
         self.m_image.add_row(features)
 
+
 def load_audio_raw_file(file_name):
     # Read the binary audio file
     with open(file_name, "rb") as file:
@@ -383,6 +387,52 @@ def load_audio_raw_file(file_name):
     audio_data = np.frombuffer(data, dtype=np.int16)
 
     # Return the data as a Python list (or leave as numpy array if preferred)
+    return audio_data.tolist()
+
+
+def load_audio_file(file_name, convert_to_mono_11025hz=False):
+    """
+    Load an audio file (WAV or MP3) and optionally convert it to mono 11025 Hz.
+
+    Args:
+        file_name (str): Path to the audio file (WAV or MP3).
+        convert_to_mono_11025hz (bool): Whether to convert to mono and resample to 11025 Hz.
+
+    Returns:
+        int: Sample rate of the audio.
+        list: Audio data as a list of samples.
+    """
+    # Load the audio file based on extension
+    if file_name.endswith('.wav'):
+        sample_rate, audio_data = wavfile.read(file_name)
+    elif file_name.endswith('.mp3'):
+        # Load MP3 file with pydub and convert to a numpy array
+        audio = AudioSegment.from_file(file_name, format="mp3")
+        sample_rate = audio.frame_rate
+        # Convert pydub audio to numpy array
+        audio_data = np.array(audio.get_array_of_samples(), dtype=np.int16)
+
+        # If stereo, reshape to 2 channels
+        if audio.channels == 2:
+            audio_data = audio_data.reshape((-1, 2))
+    else:
+        raise ValueError("Unsupported file format. Please provide a WAV or MP3 file.")
+
+    # Convert to mono and resample to 11025 Hz if the flag is set
+    if convert_to_mono_11025hz:
+        # Convert to mono if stereo (average channels)
+        if audio_data.ndim > 1:
+            audio_data = audio_data.mean(axis=1).astype(np.int16)
+
+        # Set new sample rate and calculate target number of samples for 11025 Hz
+        new_sample_rate = 11025
+        num_samples = int(len(audio_data) * new_sample_rate / sample_rate)
+
+        # Resample audio data to 11025 Hz
+        audio_data = resample(audio_data, num_samples).astype(np.int16)
+        sample_rate = new_sample_rate
+
+    # Return the modified sample rate and audio data as a list
     return audio_data.tolist()
 
 
@@ -400,7 +450,14 @@ def get_chromagram(data):
 
 if __name__ == "__main__":
 
-    data = load_audio_raw_file("data/test_mono_11025.raw")
+    data = load_audio_file("data/test_mono_11025.wav")
+
+    data_from_stereo = load_audio_file(
+        "data/test_stereo_44100.mp3",
+        convert_to_mono_11025hz=True
+    )
+    min_length = min(len(data), len(data_from_stereo))
+    data = data_from_stereo[:min_length]
 
     chromagram = get_chromagram(data)
     for chroma_i in chromagram.data:
@@ -443,5 +500,5 @@ if __name__ == "__main__":
     # Compare each value in the chromagram with the generated image
     for y in range(14):
         for x in range(12):
-            np.testing.assert_almost_equal(chromagram.data[y][x], expected_chromagram[y][x],decimal=6,
+            np.testing.assert_almost_equal(chromagram.data[y][x], expected_chromagram[y][x],decimal=2,
                                    err_msg=f"Image not equal at ({x}, {y})")

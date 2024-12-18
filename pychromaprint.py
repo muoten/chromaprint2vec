@@ -444,12 +444,10 @@ def euclidean_norm(arr: np.ndarray) -> float:
     return np.sqrt(squares) if squares > 0 else 0.0
 
 
-def plot_chromagram(chromagram_in):
+def plot_chromagram(chromagram_in, label=""):
     chromagram = np.array(chromagram_in.data).T
     chromagram = (chromagram * 255).astype(np.uint8)
     image_original = Image.fromarray(chromagram.T)
-
-    image_original = image_original.convert('L')
 
     resize = 1
 
@@ -457,10 +455,10 @@ def plot_chromagram(chromagram_in):
     image_original = image_original.convert('L')
 
     array_resampled = np.repeat(image_original, resize, axis=1).T
-    array_resampled = (array_resampled * 255).astype(np.uint8)
 
     plt.imshow(array_resampled)
     plt.title("Generated Image")
+    plt.colorbar(label="Intensity")
     plt.axis('off')  # Hide the axes
     plt.show()
 
@@ -476,6 +474,8 @@ file_path = 'data/test_stereo_44100.raw'
 
 data_from_mp3file = load_audio_raw_file(file_path)
 chromagram2 = get_chromagram(data_from_mp3file)
+
+plot_chromagram(chromagram2)
 
 # Process the image and calculate subfingerprints
 calculator.consume(chromagram2.data)

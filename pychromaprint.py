@@ -12,8 +12,10 @@ import numpy as np
 from typing import Callable, List
 import matplotlib.pyplot as plt
 from PIL import Image
-
 from pychromagram import get_chromagram, load_audio_raw_file, load_audio_file
+from scipy.ndimage import gaussian_filter
+from skimage import exposure
+from scipy.ndimage import binary_erosion
 
 kDefaultFrameSize = 4096
 kDefaultFrameOverlap = kDefaultFrameSize - kDefaultFrameSize // 3
@@ -444,7 +446,7 @@ def euclidean_norm(arr: np.ndarray) -> float:
     return np.sqrt(squares) if squares > 0 else 0.0
 
 
-def plot_chromagram(chromagram_in, label=""):
+def plot_chromagram(chromagram_in, label="", improve=False, debug=False):
     chromagram = np.array(chromagram_in.data).T
     chromagram = (chromagram * 255).astype(np.uint8)
     image_original = Image.fromarray(chromagram.T)
@@ -455,6 +457,40 @@ def plot_chromagram(chromagram_in, label=""):
     image_original = image_original.convert('L')
 
     array_resampled = np.repeat(image_original, resize, axis=1).T
+    if debug:
+        plt.imshow(array_resampled)
+        plt.show()
+    if improve:
+        image_array = array_resampled
+        normalized = (image_array - np.min(image_array)) / (np.max(image_array) - np.min(image_array))
+
+        structuring_element = np.ones((1, 5))  # A horizontal element to target horizontal lines
+
+        # Convert the image to binary based on a threshold to emphasize patterns
+        binary_image = gaussian_filter(normalized, sigma=1) > 0.25  # Threshold to identify prominent features
+        if debug:
+            plt.imshow(binary_image)
+            plt.show()
+
+        # Apply binary erosion to remove horizontal lines
+        eroded_image = binary_erosion(binary_image, structure=structuring_element)
+        if debug:
+            plt.imshow(eroded_image)
+            plt.show()
+
+        # Overlay the eroded mask on the original smoothed image to retain non-horizontal patterns
+        eroded_image = np.logical_not(eroded_image)
+        normalized = normalized * eroded_image
+        if debug:
+            plt.imshow(normalized)
+            plt.show()
+
+        normalized2 = gaussian_filter(normalized, sigma=1)
+        threshold = 0.2
+        filtered = np.where(normalized2 > threshold, normalized2, 0)
+
+        contrast_enhanced = exposure.equalize_adapthist(filtered, clip_limit=0.001)
+        array_resampled = contrast_enhanced
 
     plt.imshow(array_resampled)
     plt.title("Generated Image")

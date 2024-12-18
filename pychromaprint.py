@@ -12,7 +12,8 @@ import numpy as np
 from typing import Callable, List
 import matplotlib.pyplot as plt
 from PIL import Image
-from pychromagram import get_chromagram, load_audio_raw_file
+
+from pychromagram import get_chromagram, load_audio_raw_file, load_audio_file
 
 kDefaultFrameSize = 4096
 kDefaultFrameOverlap = kDefaultFrameSize - kDefaultFrameSize // 3
@@ -355,22 +356,6 @@ class FingerprintCalculator:
     def get_fingerprint(self):
         return self.fingerprint
 
-    def process_image_old(self, image):
-        """
-        Process the full image and calculate subfingerprints at different offsets.
-
-        :param image: Input image or feature matrix (2D numpy array)
-        :return: List of subfingerprints
-        """
-        self.m_image = image
-        num_offsets = (image.shape[0] - self.m_frame_size) // self.m_frame_overlap + 1
-        subfingerprints = []
-
-        for offset in range(num_offsets):
-            subfingerprint = self.calculate_subfingerprint(offset * self.m_frame_overlap)
-            subfingerprints.append(subfingerprint)
-
-        return subfingerprints
 
     def process_image(self, image):
         """

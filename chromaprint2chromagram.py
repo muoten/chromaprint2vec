@@ -3,7 +3,7 @@ from pychromagram import Image
 from pychromaprint import plot_chromagram, kClassifiersTest2
 import chromaprint
 
-DATASET_VERSION="v0.1"
+DATASET_VERSION="v0.2"
 
 def dequantize_value(quantized_value, quantizer):
     """

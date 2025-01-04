@@ -286,7 +286,7 @@ if __name__ == "__main__":
     actual_y = np.array(sample_input_list).reshape(1,-1)
 
     labeled_y, labeled_x = predict_with_lookup_table(actual_x_deq)
-    actual_x = pd.read_csv('data/classifier_output.csv', header=None)[0]
+    actual_x = pd.read_csv('../data/classifier_output.csv', header=None)[0]
     actual_x = np.array(actual_x)
     mse_x = np.mean((actual_x - actual_x_deq) ** 2)
     print(f"mse actual_x vs x_deq: {mse_x}")

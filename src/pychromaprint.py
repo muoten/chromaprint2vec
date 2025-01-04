@@ -12,7 +12,7 @@ import numpy as np
 from typing import Callable, List
 import matplotlib.pyplot as plt
 from PIL import Image
-from pychromagram import get_chromagram, load_audio_raw_file, load_audio_file
+from src.pychromagram import get_chromagram, load_audio_raw_file, load_audio_file
 from scipy.ndimage import gaussian_filter
 from skimage import exposure
 from scipy.ndimage import binary_erosion

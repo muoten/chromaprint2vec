@@ -1,5 +1,5 @@
 import unittest
-from pychromaprint import (
+from src.pychromaprint import (
     FingerprinterConfigurationTest2,
     FingerprintCalculator,
     load_audio_file,

@@ -203,7 +203,7 @@ def refine_vectors_with_best_offsets(vectors, threshold=FIND_OFFSET_THRESHOLD):
 
 
 if __name__ == "__main__":
-    my_fingerprint1 = get_fingerprint_encoded_from_filename('data/fingerprint_chromatic.txt')
+    my_fingerprint1 = get_fingerprint_encoded_from_filename('../data/fingerprint_chromatic.txt')
     vector = get_array_from_fingerprint_encoded(my_fingerprint1)
     my_fingerprint2 = get_fingerprint_encoded_from_array(vector)
     assert(my_fingerprint1==my_fingerprint2)

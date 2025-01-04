@@ -69,7 +69,7 @@ def plot_chromagram(chromagram):
 
 if __name__ == "__main__":
 
-    filename = "data/fingerprint_chromatic.txt"
+    filename = "../data/fingerprint_chromatic.txt"
     my_fingerprint1 = get_fingerprint_encoded_from_filename(filename)
     vector = get_array_from_fingerprint_encoded(my_fingerprint1)
     my_fingerprint2 = get_fingerprint_encoded_from_array(vector)

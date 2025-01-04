@@ -226,6 +226,7 @@ def main_crawler():
                 if list_mbids_for_single is not None:
                     list_mbids.extend(list_mbids_for_single)
 
+        assert len(list_mbids) > 0, f"{artist_id} has no singles. Please remove from LIST_ARTIST_ID in config.py"
         dict_artists[artist_id] = list_mbids
 
     dict_artists_str = {key: ','.join(value) for key, value in dict_artists.items()}

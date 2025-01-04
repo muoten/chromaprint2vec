@@ -7,7 +7,7 @@ from sklearn.decomposition import PCA
 import subprocess
 import random
 from chromaprint_utils import get_array_from_fingerprint_encoded, get_fingerprint_encoded_from_filename, \
-    refine_vectors_with_best_offsets, get_fingerprint_encoded_from_array
+    refine_vectors_with_best_offsets, get_fingerprint_encoded_from_array, get_distance_to_ref
 
 random.seed(RANDOM_SEED)
 
@@ -23,12 +23,18 @@ def generate_vectors_from_artist_list(list_artists, use_chromagrams=USE_CHROMAGR
         assert len(fingerprint_filenames) > 0, "You need to execute chromaprint_crawler.py to populate data/"
         for filename in fingerprint_filenames:
             fingerprint_encoded = get_fingerprint_encoded_from_filename(f"data/{artist_id}/{filename}")
+            vector_i_fingerprint = np.array([])
+            vector_i_chromagram = np.array([])
+            if USE_FINGERPRINTS:
+                array = get_array_from_fingerprint_encoded(fingerprint_encoded, debug=IS_DEBUG,
+                                                       info=f"{artist_id}/{filename}")
+                vector_i_fingerprint = array.reshape(-1)
             if use_chromagrams:
                 chromagram = get_chromagram_from_chromaprint(fingerprint_encoded)
-                array = get_array_from_chromagram(chromagram)
-            else:
-                array = get_array_from_fingerprint_encoded(fingerprint_encoded, debug=IS_DEBUG, info=f"{artist_id}/{filename}")
-            vector_i = array.reshape(-1)
+                array_chromagram = get_array_from_chromagram(chromagram)
+                vector_i_chromagram = array_chromagram.reshape(-1)
+            vector_i = np.concatenate([vector_i_chromagram, vector_i_fingerprint])
+            assert USE_FINGERPRINTS or USE_CHROMAGRAMS, "USE_FINGERPRINTS or USE_CHROMAGRAMS needs to be enabled"
             if IS_DEBUG:
                 print(fingerprint_encoded)
                 print(array)
@@ -46,9 +52,23 @@ def generate_vectors_from_artist_list(list_artists, use_chromagrams=USE_CHROMAGR
         vectors_truncated = [vector[:MINIMAL_LENGTH_VECTORS] for vector in vectors]
 
         offsets, vectors_refined, adhoc_mapping = refine_vectors_with_best_offsets(vectors_truncated)
+        # regenerate vectors after truncation
         vectors = [np.concatenate((vector[int(offsets[i]):], vector[:int(offsets[i])])) for i, vector in enumerate(vectors)]
     return vectors, adhoc_mapping
 
+
+def regenerate_mapping(adhoc_mapping, vectors):
+    # regenerate adhoc_mapping
+    adhoc_mapping = {}
+    # Compute distances for all pairs
+    for i, arr1 in enumerate(vectors):
+        for j, arr2 in enumerate(vectors):
+            if i < j:  # Avoid duplicate pairs and self-pairs
+                distance = get_distance_to_ref(arr1, vector_ref=arr2)
+                if distance < FIND_MAPPING_THRESHOLD:
+                    print(f"For i={i}, j={j}, distance={distance}")
+                    adhoc_mapping[i] = j
+    return adhoc_mapping
 
 
 
@@ -100,7 +120,7 @@ def refine_mapping(df):
             adhoc_mapping.pop(key, None)
 
     precision = len(adhoc_mapping.keys())/len(keys)
-    print(f"Estimated precision based on metadata: {precision:.2}")
+    print(f"Estimated precision based on metadata: {precision:.3}")
 
 
 def reformat_metadata(df):
@@ -136,6 +156,8 @@ if __name__ == "__main__":
     vectors_original, adhoc_mapping = generate_vectors_from_artist_list(sorted_artist_list)
 
     vectors_reduced = reduce_dimensions(vectors_original)
+    if REDO_MAPPING_AFTER_PCA:
+        adhoc_mapping = regenerate_mapping(adhoc_mapping, vectors_reduced)
     df_vectors_reduced = pd.DataFrame(vectors_reduced)
     df_vectors_reduced.to_csv(VECTORS_FILENAME, sep='\t', header=False, index=False)
     df_metadata = collect_metadata()

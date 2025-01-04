@@ -153,7 +153,7 @@ def generate_distance_matrix(array_all_fingerprints):
     return distance_matrix
 
 
-def refine_vectors_with_best_offsets(vectors, threshold=0.3):
+def refine_vectors_with_best_offsets(vectors, threshold=FIND_OFFSET_THRESHOLD):
     adhoc_mapping = {}
     vectors_refined = []
     offsets = np.zeros(len(vectors))

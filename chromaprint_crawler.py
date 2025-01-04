@@ -29,8 +29,8 @@ def get_singles_by_artist_id(artist_id, max_singles=MAX_SINGLES):
     # Step 2: Paginate through the release groups to get all singles
     while True:
         # Query the MusicBrainz API for singles with pagination
-        response = requests.get(f"{base_url}&offset={offset}")
-        data = response.json()
+        url = f"{base_url}&offset={offset}"
+        data = get_request_url_with_retries(url)
         if 'release-groups' in data.keys():
     
         # Add titles and MBIDs to the list
@@ -56,18 +56,32 @@ def get_singles_by_artist_id(artist_id, max_singles=MAX_SINGLES):
 def get_release_id_by_single(release_group_id, title=None):
     # Query the releases under this release group (single)
     release_url = f"https://musicbrainz.org/ws/2/release?release-group={release_group_id}&fmt=json"
-    release_response = requests.get(release_url)
-    release_data = release_response.json()
+    release_data = get_request_url_with_retries(release_url)
+    assert 'releases' in release_data
     release_id = release_data['releases'][0]['id']
     return release_id
+
+
+def get_request_url_with_retries(url):
+    response = requests.get(url)
+    data = response.json()
+    retry = 0
+    while 'error' in data:
+        print("Retrying after error...")
+        retry = retry + 1
+        time.sleep(SECONDS_SLEEP_MUSICBRAINZ * 10 * retry)
+        response = requests.get(url)
+        data = response.json()
+    return data
+
+
 
 def get_recordings_by_release_id(release_id, max_recordings=MAX_RECORDINGS_PER_RELEASE):
     # Query recordings for this release
     recording_ids = []
     release_url = f"https://musicbrainz.org/ws/2/release/{release_id}?inc=recordings&fmt=json"
-    release_response = requests.get(release_url)
-    release_data = release_response.json()
-
+    release_data = get_request_url_with_retries(release_url)
+    assert 'media' in release_data.keys()
     for medium in release_data['media']:
         for track in medium['tracks']:
             recording_ids.append(track['recording']['id'])
@@ -209,7 +223,9 @@ def main_crawler():
     dict_artists = {}
     try:
         df_mbids = pd.read_csv(MBIDS_HISTORY_FILENAME)
+        print(f"File {MBIDS_HISTORY_FILENAME} was loaded")
     except (FileNotFoundError, pandas.errors.EmptyDataError):
+        print(f"No file {MBIDS_HISTORY_FILENAME} was found. Starting crawler from scratch")
         df_mbids = None
 
     for artist_id in LIST_ARTIST_ID:

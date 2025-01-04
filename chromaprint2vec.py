@@ -123,12 +123,11 @@ def refine_mapping(df):
     print(f"Estimated precision based on metadata: {precision:.3}")
 
 
-def reformat_metadata(df):
+def reformat_metadata(df, adhoc_mapping):
     df = pd.DataFrame(df, columns=['artist', 'title', 'length'])
     df = df[['title', 'artist', 'length']]
     df['index'] = df.index
     df['__next__'] = df.index
-    #adhoc_mapping = {11: 1, 46: 76, 36: 105, 42: 43}
     refine_mapping(df)
     df['__next__'] = df['__next__'].apply(lambda x: adhoc_mapping[x] if x in adhoc_mapping.keys() else '')
     return df
@@ -161,5 +160,5 @@ if __name__ == "__main__":
     df_vectors_reduced = pd.DataFrame(vectors_reduced)
     df_vectors_reduced.to_csv(VECTORS_FILENAME, sep='\t', header=False, index=False)
     df_metadata = collect_metadata()
-    df_metadata = reformat_metadata(df_metadata)
+    df_metadata = reformat_metadata(df_metadata, adhoc_mapping)
     df_metadata.to_csv(METADATA_FILENAME, sep='\t', index=False)

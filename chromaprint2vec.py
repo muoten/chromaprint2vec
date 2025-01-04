@@ -15,8 +15,12 @@ random.seed(RANDOM_SEED)
 def generate_vectors_from_artist_list(list_artists, use_chromagrams=USE_CHROMAGRAMS):
     vectors = []
     for artist_id in list_artists:
-        fingerprint_filenames = sorted([f for f in os.listdir(f"data/{artist_id}") if f.endswith('.txt') and f.startswith('fingerprint')])
-
+        fingerprint_filenames = []
+        try:
+            fingerprint_filenames = sorted([f for f in os.listdir(f"data/{artist_id}") if f.endswith('.txt') and f.startswith('fingerprint')])
+        except FileNotFoundError as e:
+            print(e)
+        assert len(fingerprint_filenames) > 0, "You need to execute chromaprint_crawler.py to populate data/"
         for filename in fingerprint_filenames:
             fingerprint_encoded = get_fingerprint_encoded_from_filename(f"data/{artist_id}/{filename}")
             if use_chromagrams:
@@ -63,12 +67,49 @@ def reduce_dimensions(vectors):
     return vectors_out
 
 
+def levenshtein_distance(s1, s2):
+    m, n = len(s1), len(s2)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+
+    for i in range(m + 1):
+        for j in range(n + 1):
+            if i == 0:
+                dp[i][j] = j  # If s1 is empty, insert all characters of s2
+            elif j == 0:
+                dp[i][j] = i  # If s2 is empty, remove all characters of s1
+            elif s1[i - 1] == s2[j - 1]:
+                dp[i][j] = dp[i - 1][j - 1]  # If last characters match, ignore them
+            else:
+                dp[i][j] = 1 + min(dp[i - 1][j],    # Remove
+                                   dp[i][j - 1],    # Insert
+                                   dp[i - 1][j - 1])  # Replace
+
+    return dp[m][n]
+
+
+def refine_mapping(df):
+    keys = adhoc_mapping.copy().keys()
+    for key in keys:
+        title_src = df[df.index==key]['title'].iloc[0]
+        title_dst = df[df.index==adhoc_mapping[key]]['title'].iloc[0]
+        # Calculate Levenshtein distance
+        lev_distance = levenshtein_distance(title_src, title_dst)
+        lev_distance_norm = lev_distance/(len(title_src)+len(title_dst))
+        print(f"Edit distance '{title_src}' vs '{title_dst}':{lev_distance_norm:.2}")
+        if lev_distance_norm > LEV_DISTANCE_THRESHOLD:
+            adhoc_mapping.pop(key, None)
+
+    precision = len(adhoc_mapping.keys())/len(keys)
+    print(f"Estimated precision based on metadata: {precision:.2}")
+
+
 def reformat_metadata(df):
     df = pd.DataFrame(df, columns=['artist', 'title', 'length'])
     df = df[['title', 'artist', 'length']]
     df['index'] = df.index
     df['__next__'] = df.index
     #adhoc_mapping = {11: 1, 46: 76, 36: 105, 42: 43}
+    refine_mapping(df)
     df['__next__'] = df['__next__'].apply(lambda x: adhoc_mapping[x] if x in adhoc_mapping.keys() else '')
     return df
 

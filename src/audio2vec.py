@@ -5,6 +5,7 @@ import eyed3
 import numpy as np
 import os
 import random
+import time
 from chromaprint_utils import refine_vectors_with_best_offsets, get_array_from_fingerprint_encoded
 from src.chromaprint2vec import convert_input_to_vectors_csv
 from src.pychromagram import load_audio_file, get_chromagram
@@ -41,7 +42,8 @@ def chromagram_to_chromaprint(chromagram):
 def generate_vectors_from_audio_files(folder):
     vectors = []
     sorted_audio_filenames = get_sorted_audio_filenames(folder)
-    for audio_filename in sorted_audio_filenames:
+    start_time = time.time()
+    for i,audio_filename in enumerate(sorted_audio_filenames):
         chromagram = audiofile_to_chromagram(f"{folder}/{audio_filename}")
         vector_i_fingerprint = np.array([])
         vector_i_chromagram = np.array([])
@@ -54,6 +56,15 @@ def generate_vectors_from_audio_files(folder):
             vector_i_chromagram = np.array(chromagram.data).reshape(-1)
         vector_i = np.concatenate([vector_i_chromagram, vector_i_fingerprint])
         vectors.append(vector_i)
+        if i % 10 == 0:
+            end_time = time.time()
+            execution_time = end_time - start_time  # Calculate the execution time
+            elapsed_time_msg = (
+                f"{i + 1}/{len(sorted_audio_filenames)} files processed. "
+                f"Elapsed time: {execution_time:.1f}s ({(execution_time) / (i+1):.1f}s per file)"
+            )
+            print(elapsed_time_msg)
+
     max_length = max(len(vector_i) for vector_i in vectors)  # Find the maximum length of vectors
 
     assert len(vector_i) > 0, f"{audio_filename} gets empty chromagram"

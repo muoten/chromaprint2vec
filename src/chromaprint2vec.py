@@ -152,10 +152,9 @@ def collect_metadata():
     return df
 
 
-if __name__ == "__main__":
-    sorted_artist_list = sorted(LIST_ARTIST_ID)
+def convert_input_to_vectors_csv(function, argument):
     if not os.path.exists(VECTORS_ORIGINAL_FILENAME) or not RELOAD_VECTORS:
-        vectors_original, adhoc_mapping = generate_vectors_from_artist_list(sorted_artist_list)
+        vectors_original, adhoc_mapping = function(argument)
         np.save(VECTORS_ORIGINAL_FILENAME, vectors_original)
         with open(MAPPING_FILENAME, "w") as f:
             json.dump(adhoc_mapping, f)
@@ -175,3 +174,8 @@ if __name__ == "__main__":
     df_metadata = collect_metadata()
     df_metadata = reformat_metadata(df_metadata, adhoc_mapping)
     df_metadata.to_csv(METADATA_FILENAME, sep='\t', index=False)
+
+
+if __name__ == "__main__":
+    sorted_artist_list = sorted(LIST_ARTIST_ID)
+    convert_input_to_vectors_csv(generate_vectors_from_artist_list, sorted_artist_list)

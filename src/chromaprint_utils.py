@@ -176,11 +176,12 @@ def refine_vectors_with_best_offsets(vectors, threshold=FIND_OFFSET_THRESHOLD):
             if j > i:
                 # Find the best offset using FFT
                 best_offset, max_corr = find_best_offset_fft(arr_i, arr_j)
-                best_offset_i, max_corr_i = find_best_offset_fft(1-arr_i, arr_j)
-                if max_corr_i > max_corr:
-                    best_offset = best_offset_i
-                    arr_i = 1-arr_i
-                if best_offset != 0 and j not in adhoc_mapping.values():
+                if FIND_BEST_OFFSET_INVERT_SIGNAL:
+                    best_offset_i, max_corr_i = find_best_offset_fft(1-arr_i, arr_j)
+                    if max_corr_i > max_corr:
+                        best_offset = best_offset_i
+                        arr_i = 1-arr_i
+                if j not in adhoc_mapping.values():
                     arr_i_offset = np.concatenate((arr_i[best_offset:], arr_i[:best_offset]))
                     best_distance = get_distance_to_ref(arr_i_offset, vector_ref=arr_j)
                     if (best_distance < threshold) & (best_distance < min_distance_for_arr_i):

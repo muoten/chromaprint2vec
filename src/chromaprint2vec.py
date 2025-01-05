@@ -20,7 +20,7 @@ def generate_vectors_from_artist_list(list_artists, use_chromagrams=USE_CHROMAGR
             fingerprint_filenames = sorted([f for f in os.listdir(f"data/{artist_id}") if f.endswith('.txt') and f.startswith('fingerprint')])
         except FileNotFoundError as e:
             print(e)
-        assert len(fingerprint_filenames) > 0, "You need to execute chromaprint_crawler.py to populate data/"
+        assert len(fingerprint_filenames) > 0, f"No data for {artist_id}. Run chromaprint_crawler.py or remove it from LIST_ARTIST_ID"
         for filename in fingerprint_filenames:
             fingerprint_encoded = get_fingerprint_encoded_from_filename(f"data/{artist_id}/{filename}")
             vector_i_fingerprint = np.array([])
@@ -116,7 +116,8 @@ def refine_mapping(df):
         lev_distance = levenshtein_distance(title_src, title_dst)
         lev_distance_norm = lev_distance/(len(title_src)+len(title_dst))
         print(f"Edit distance '{title_src}' vs '{title_dst}':{lev_distance_norm:.2}")
-        if lev_distance_norm > LEV_DISTANCE_THRESHOLD:
+        self_contained = title_src.startswith(title_dst) or title_dst.startswith(title_src)
+        if lev_distance_norm > LEV_DISTANCE_THRESHOLD and not self_contained:
             adhoc_mapping.pop(key, None)
 
     precision = len(adhoc_mapping.keys())/len(keys)

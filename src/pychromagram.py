@@ -104,8 +104,9 @@ class AudioProcessor:
 
     def consume(self, input_data, length):
         if length % self.m_num_channels != 0:
-            logging.debug("AudioProcessor::consume() -- Length not divisible by number of channels.")
-            return
+            logging.info("AudioProcessor::consume() -- Length not divisible by number of channels.")
+            input_data.pop()
+            length = len(input_data)
 
         while length > 0:
             consumed = self.load(input_data, length)

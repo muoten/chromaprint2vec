@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 import subprocess
 import random
 from chromaprint_utils import get_array_from_fingerprint_encoded, get_fingerprint_encoded_from_filename, \
-    refine_vectors_with_best_offsets, get_fingerprint_encoded_from_array, get_distance_to_ref
+    refine_vectors_with_best_offsets, get_distance_to_ref
 
 random.seed(RANDOM_SEED)
 
@@ -135,7 +135,7 @@ def reformat_metadata(df, adhoc_mapping):
     return df
 
 
-def collect_metadata():
+def collect_metadata_from_txt():
     metadata = None
     try:
         # Use shell=True to enable wildcard expansion
@@ -152,7 +152,7 @@ def collect_metadata():
     return df
 
 
-def convert_input_to_vectors_csv(function, argument):
+def convert_input_to_vectors_csv(function, argument, function_to_collect_metadata):
     if not os.path.exists(VECTORS_ORIGINAL_FILENAME) or not RELOAD_VECTORS:
         vectors_original, adhoc_mapping = function(argument)
         np.save(VECTORS_ORIGINAL_FILENAME, vectors_original)
@@ -171,11 +171,12 @@ def convert_input_to_vectors_csv(function, argument):
         adhoc_mapping = regenerate_mapping(adhoc_mapping, vectors_reduced)
     df_vectors_reduced = pd.DataFrame(vectors_reduced)
     df_vectors_reduced.to_csv(VECTORS_FILENAME, sep='\t', header=False, index=False)
-    df_metadata = collect_metadata()
+    df_metadata = function_to_collect_metadata()
     df_metadata = reformat_metadata(df_metadata, adhoc_mapping)
     df_metadata.to_csv(METADATA_FILENAME, sep='\t', index=False)
 
 
 if __name__ == "__main__":
     sorted_artist_list = sorted(LIST_ARTIST_ID)
-    convert_input_to_vectors_csv(generate_vectors_from_artist_list, sorted_artist_list)
+    function_to_collect_metadata = collect_metadata_from_txt
+    convert_input_to_vectors_csv(generate_vectors_from_artist_list, sorted_artist_list, function_to_collect_metadata)

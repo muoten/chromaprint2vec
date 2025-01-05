@@ -6,10 +6,14 @@ certifi==2024.8.30
 cffi==1.17.1
 charset-normalizer==3.3.2
 contourpy==1.1.1
+coverage==5.5
 cycler==0.12.1
 decorator==5.1.1
+deprecation==2.1.0
 essentia==2.1b6.dev1110
 exceptiongroup==1.2.2
+eyed3==0.9.7
+filetype==1.2.0
 fonttools==4.53.1
 h11==0.14.0
 idna==3.9
@@ -54,6 +58,7 @@ soupsieve==2.6
 soxr==0.3.7
 threadpoolctl==3.5.0
 tifffile==2024.8.30
+toml==0.10.2
 trio==0.26.2
 trio-websocket==0.11.1
 typing_extensions==4.12.2

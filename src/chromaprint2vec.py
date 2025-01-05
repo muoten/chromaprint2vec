@@ -1,5 +1,6 @@
 from chromagram_utils import get_chromagram_from_chromaprint, get_array_from_chromagram
 from config import *
+import json
 import numpy as np
 import os
 import pandas as pd
@@ -107,7 +108,7 @@ def levenshtein_distance(s1, s2):
     return dp[m][n]
 
 
-def refine_mapping(df):
+def refine_mapping(df, adhoc_mapping):
     keys = adhoc_mapping.copy().keys()
     for key in keys:
         title_src = df[df.index==key]['title'].iloc[0]
@@ -129,7 +130,7 @@ def reformat_metadata(df, adhoc_mapping):
     df = df[['title', 'artist', 'length']]
     df['index'] = df.index
     df['__next__'] = df.index
-    refine_mapping(df)
+    refine_mapping(df, adhoc_mapping)
     df['__next__'] = df['__next__'].apply(lambda x: adhoc_mapping[x] if x in adhoc_mapping.keys() else '')
     return df
 
@@ -153,7 +154,18 @@ def collect_metadata():
 
 if __name__ == "__main__":
     sorted_artist_list = sorted(LIST_ARTIST_ID)
-    vectors_original, adhoc_mapping = generate_vectors_from_artist_list(sorted_artist_list)
+    if not os.path.exists(VECTORS_ORIGINAL_FILENAME) or not RELOAD_VECTORS:
+        vectors_original, adhoc_mapping = generate_vectors_from_artist_list(sorted_artist_list)
+        np.save(VECTORS_ORIGINAL_FILENAME, vectors_original)
+        with open(MAPPING_FILENAME, "w") as f:
+            json.dump(adhoc_mapping, f)
+    else:
+        print(f"Loading {VECTORS_ORIGINAL_FILENAME}...")
+        vectors_original = np.load(VECTORS_ORIGINAL_FILENAME)
+        with open(MAPPING_FILENAME, "r") as f:
+            adhoc_mapping = json.load(f)
+        # Convert string keys to integers
+        adhoc_mapping = {int(k): v for k, v in adhoc_mapping.items()}
 
     vectors_reduced = reduce_dimensions(vectors_original)
     if REDO_MAPPING_AFTER_PCA:

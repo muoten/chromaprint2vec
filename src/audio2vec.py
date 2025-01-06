@@ -8,6 +8,7 @@ import random
 import time
 from chromaprint_utils import refine_vectors_with_best_offsets, get_array_from_fingerprint_encoded
 from src.chromaprint2vec import convert_input_to_vectors_csv
+from src.harmony_utils import audio_file_to_chords, chords_to_vector
 from src.pychromagram import load_audio_file, get_chromagram
 if USE_FINGERPRINTS:
     from src.pychromaprint import FingerprinterConfigurationTest2, FingerprintCalculator
@@ -44,17 +45,28 @@ def generate_vectors_from_audio_files(folder):
     sorted_audio_filenames = get_sorted_audio_filenames(folder)
     start_time = time.time()
     for i,audio_filename in enumerate(sorted_audio_filenames):
-        chromagram = audiofile_to_chromagram(f"{folder}/{audio_filename}")
+        filename_path = f"{folder}/{audio_filename}"
+
         vector_i_fingerprint = np.array([])
         vector_i_chromagram = np.array([])
+        vector_i_harmony = np.array([])
+
+        if USE_CHROMAGRAMS or USE_FINGERPRINTS:
+            chromagram = audiofile_to_chromagram(filename_path)
+            if USE_CHROMAGRAMS:
+                vector_i_chromagram = np.array(chromagram.data).reshape(-1)
+
         if USE_FINGERPRINTS:
             fingerprint_encoded = chromagram_to_chromaprint(chromagram)
             print(fingerprint_encoded)
             array = get_array_from_fingerprint_encoded(fingerprint_encoded, debug=IS_DEBUG)
             vector_i_fingerprint = array.reshape(-1)
-        if USE_CHROMAGRAMS:
-            vector_i_chromagram = np.array(chromagram.data).reshape(-1)
-        vector_i = np.concatenate([vector_i_chromagram, vector_i_fingerprint])
+
+        if USE_HARMONY:
+            chords = audio_file_to_chords(filename_path)
+            array_chords = chords_to_vector(chords)
+            vector_i_harmony = np.array(array_chords).reshape(-1)
+        vector_i = np.concatenate([vector_i_chromagram, vector_i_fingerprint, vector_i_harmony])
         vectors.append(vector_i)
         if i % 10 == 0:
             end_time = time.time()
@@ -92,6 +104,7 @@ def collect_metadata_from_audio_files():
 
         # Extract metadata
         print(f"Title: {audio.tag.title}")
+        assert audio.tag.title is not None, f"No title metadata in {audio_filename}"
         print(f"Artist: {audio.tag.artist}")
         print(f"Album: {audio.tag.album}")
         print(f"Genre: {audio.tag.genre}")

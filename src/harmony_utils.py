@@ -146,9 +146,17 @@ def circle_of_fifths_embedding(chord):
         "F": 11, "E#": 11  # F and E# are the same
     }
     tonic = chord.rstrip("m")  # Remove minor 'm' suffix
+    tonic = tonic.replace("d", "") # Remove diminished 'd' suffix
     is_minor = chord.endswith("m")
+    is_diminished = chord.endswith("d")
     angle = 2 * np.pi * circle_of_fifths[tonic] / 12
-    radius = 0.9 if is_minor else 1.0  # Minor chords closer to the center
+    # Set the radius based on chord type
+    if is_diminished:
+        radius = 0.8  # Diminished chords are closer to the center
+    elif is_minor:
+        radius = 0.9  # Minor chords are closer to the center
+    else:
+        radius = 1.0  # Major chords are on the outer circle
     return np.array([radius * np.cos(angle), radius * np.sin(angle)])
 
 
@@ -157,9 +165,11 @@ def chord_embedding(chord):
     quality_vector = {
         "M": [1, 0, 0],   # Major
         "m": [0, 1, 0],   # Minor
-        "dim": [0, 0, 1]  # Diminished
+        "d": [0, 0, 1]  # Diminished
     }
     quality = "m" if chord.endswith("m") else "M"
+    if chord.endswith("d"):
+        quality = "d"
     return np.concatenate([circle_embedding, quality_vector[quality]])
 
 

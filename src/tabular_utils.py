@@ -6,6 +6,7 @@ from harmony_utils import chords_to_vector
 EXCLUDE_ALL_MINOR = False
 EXCLUDE_MORE_THAN_4CHORDS_PER_SONG = True
 USE_SET_NOT_SEQUENCE = False
+USE_TEMPO = True
 
 
 # Function to generate chord progression based on pitch class and mode
@@ -100,13 +101,21 @@ if __name__ == "__main__":
     if EXCLUDE_MORE_THAN_4CHORDS_PER_SONG:
         df = df.drop_duplicates(subset=['mode', 'key', 'song', 'artist'], keep='first')
         df['section'] = ''
+        df = df.reset_index(drop=True)
 
     df['vectors'] = df[column_with_chords].apply(lambda x: np.array(chords_to_vector(x)).reshape(-1))
 
     df_vectors_reduced = pd.DataFrame(list(df['vectors'].values))
     df_vectors_reduced = df_vectors_reduced.iloc[:, 0:20]
+    if USE_TEMPO:
+        max_tempo = df['tempo'].max()
+        df['norm_tempo'] = df['tempo']/max_tempo
+        df_vectors_reduced[20]  = df['norm_tempo'].apply(lambda x: x if not pd.isna(x) else 0)
+
     df_vectors_reduced.to_csv('data/vectors.csv', sep='\t', header=False, index=False)
-    df_metadata = df.loc[:,['chords','cp','key', 'section', 'song', 'artist']]
+    df_metadata = df.loc[:,['chords','cp','key', 'section', 'song', 'artist', 'tempo']]
+    if EXCLUDE_MORE_THAN_4CHORDS_PER_SONG:
+        df_metadata = df_metadata.drop(columns='section')
     print(df_metadata)
 
     df_metadata.to_csv('data/metadata.csv', sep='\t', index=False)
